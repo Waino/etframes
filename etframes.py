@@ -9,6 +9,8 @@ License: Distributed under the PSF license, http://www.python.org/psf/license/
 """
 import matplotlib.pylab
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.transforms as transforms
 
 from matplotlib.collections import LineCollection
 from matplotlib.artist import Artist
@@ -109,6 +111,54 @@ class RangeFrameArtist(Artist):
         return range_lines
 
 
+class BarChartArtist(Artist):
+    """ Axis drawing artist for the simplified bar chart """
+    def __init__(self, color=None, linewidth=None):
+        """
+        color: color to use for bottom line
+        linewidth: width of bottom line
+        """
+        Artist.__init__(self)
+        if color is None:
+            color = (.5, .5, .5)
+        if linewidth is None:
+            linewidth = 3
+        self.color = color
+        self.linewidth = linewidth
+
+    def draw(self, renderer, *args, **kwargs):
+        if not self.get_visible(): return
+
+        self.xminf, self.xmaxf = interval_as_array(self.axes.dataLim.intervalx)
+
+        bottom = self.make_bottom_line()
+        bottom.draw(renderer)
+
+        self.clean_ticks()
+
+    def make_bottom_line(self):
+        """ Makes a line at the bottom. FIXME: for some reason there is a single pixel glitch """
+        trans = transforms.blended_transform_factory(
+            self.axes.transData, self.axes.transAxes
+        )
+
+        range_lines = LineCollection(
+            segments=[[(self.xminf,0), (self.xmaxf,0)]],
+            linewidths=[self.linewidth],
+            colors=[self.color],
+            transform=trans,
+            zorder=0
+        )
+        return range_lines
+
+    def clean_ticks(self):
+        """ For this chart, we don't want ticks on either side, only labels """
+        for tick in self.axes.xaxis.get_major_ticks() + self.axes.xaxis.get_minor_ticks():
+            tick.tick1On = False
+        for tick in self.axes.yaxis.get_major_ticks() + self.axes.yaxis.get_minor_ticks():
+            tick.tick1On = False
+
+
 def add_range_frame(
     axes=None, color="k", linewidth=1.0, xbounds=None, ybounds=None
 ):
@@ -171,3 +221,44 @@ def add_dot_dash_plot(axes=None, xs=None, ys=None):
         axes.yaxis.set_minor_locator(FixedLocator(ys))
 
     cleanframe_and_ticks(axes)
+
+
+def bar_chart(
+    data, yticks, color=None, papercolor=None, linewidth=3, barwidth=.5
+):
+    """
+    Plots a vector of values in a bar chart, as described on p. 128
+    of Tufte's "The Visual Display of Quantitative Information".
+
+    data: A vector of numerical values.
+          Multiple data series are not supported.
+    yticks: Positions of y-axis ticks and white grid lines.
+            The user must explicitly set these, as it strongly affects the
+            readability of the chart.
+
+    Optional keyword arguments:
+    color: color to use for the bars. Default: gray.
+    papercolor: color of paper. Necessary for the white grid to work.
+                Default: white.
+    linewidth: width of white grid and bottom line.
+    barwidth: width of the bars, as proportion [0,1]. Default: 0.5.
+    """
+    data = np.asarray(data)
+    assert len(data.shape) == 1, 'This bar chart is only designed for univariate data'
+
+    if color is None:
+        color = (.5, .5, .5)
+    if papercolor is None:
+        papercolor = (1, 1, 1)
+
+    plt.bar(range(len(data)), data, width=barwidth, align='center', color=color, edgecolor=color)
+    axes = matplotlib.pylab.gca()
+    cleanframe_and_ticks(axes)
+    axes.set_xlim(-barwidth, len(data) - 1 + barwidth)
+    axes.set_yticks(yticks)
+    axes.add_artist(BarChartArtist())
+    for tick in axes.xaxis.get_major_ticks() + axes.xaxis.get_minor_ticks():
+        tick.tick1On = False
+    for y in axes.yaxis.get_majorticklocs():
+        if y == 0: continue
+        plt.axhline(y, color=papercolor, linewidth=3)
