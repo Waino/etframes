@@ -2,11 +2,13 @@
 This module implements two graph types described in Edward Tufte's
 "Visual Display of Quantitative Information".
 
-Author: Adam Hupp <adam@hupp.org>
+Original author: Adam Hupp <adam@hupp.org>
+Author of this fork: Stig-Arne Gronroos <stig.gronroos@gmail.com>
 License: Distributed under the PSF license, http://www.python.org/psf/license/
 
 """
 import matplotlib.pylab
+import numpy as np
 
 from matplotlib.collections import LineCollection
 from matplotlib.artist import Artist
@@ -16,6 +18,7 @@ __all__ = ["add_range_frame", "add_dot_dash_plot"]
 
 
 def cleanframe_and_ticks(axes):
+    """Removes frame around plot contents and removes redundant ticks"""
 
     # Turn off the default frame
     axes.set_frame_on(False)
@@ -26,29 +29,41 @@ def cleanframe_and_ticks(axes):
 
 
 def interval_frac(interval, datapoint):
-    """Given an interval and a point in the same range, return
+    """
+    Given an interval and a point in the same range, return
     the fractional distance of that point along the interval
     Clipped to [0,1]
     """
-    pos = (datapoint - interval.get_bounds()[0])/interval.span()
+
+    pos = (datapoint - interval[0]) / (interval[1] - interval[0])
     # don't allow past border of axis
     return max(0.0, min(1.0, pos))
 
 
+def interval_as_array(interval):
+    """Backwards compatibility with pre-numpy intervals."""
+
+    if callable(interval):
+        tmp = interval()
+        return np.array(tmp.get_bounds())
+    else:
+        return np.asarray(interval)
+
+
 def data_bounds_on_axis(view_interval, data_bounds):
-    "Map min/max from data space to viewport space."
-    
+    """Map min/max from data space to viewport space."""
+
     if data_bounds is None:
         return (0.0, 1.0)
-    
+
     lower = interval_frac(view_interval, data_bounds[0])
     upper = interval_frac(view_interval, data_bounds[1])
     return lower, upper
 
 
 class RangeFrameArtist(Artist):
-    "Draws range frames on a graph"
-    
+    """"Draws range frames on a graph"""
+
     def __init__(self, color, linewidth, xbounds, ybounds):
         """
         color: str indicating color of line
@@ -60,29 +75,33 @@ class RangeFrameArtist(Artist):
         self.linewidth = linewidth
         self.xbounds = xbounds
         self.ybounds = ybounds
-        
+
     def draw(self, renderer, *args, **kwargs):
         if not self.get_visible(): return
 
         rf = self.make_range_frame()
         rf.draw(renderer)
 
-
     def make_range_frame(self):
+        """ Constructs the component lines of the range frame """
+        xminf, xmaxf = data_bounds_on_axis(
+            interval_as_array(self.axes.viewLim.intervalx),
+            self.xbounds
+        )
 
-        xminf, xmaxf = data_bounds_on_axis(self.axes.viewLim.intervalx(),
-                                           self.xbounds)
+        yminf, ymaxf = data_bounds_on_axis(
+            interval_as_array(self.axes.viewLim.intervaly),
+            self.ybounds
+        )
 
-        yminf, ymaxf = data_bounds_on_axis(self.axes.viewLim.intervaly(),
-                                           self.ybounds)
+        xline = [(xminf, 0), (xmaxf, 0)]
+        yline = [(0, yminf), (0, ymaxf)]
 
-
-        xline = [(xminf,0), (xmaxf,0)]
-        yline = [(0,yminf), (0,ymaxf)]
-
-        range_lines = LineCollection(segments=[xline, yline],
-                                     linewidths=[self.linewidth],
-                                     colors=[self.color])
+        range_lines = LineCollection(
+            segments=[xline, yline],
+            linewidths=[self.linewidth],
+            colors=[self.color]
+        )
 
         range_lines.set_transform(self.axes.transAxes)
         range_lines.set_zorder(10)
@@ -90,10 +109,9 @@ class RangeFrameArtist(Artist):
         return range_lines
 
 
-
-
-def add_range_frame(axes=None, color="k", linewidth=1.0,
-                         xbounds=None, ybounds=None):
+def add_range_frame(
+    axes=None, color="k", linewidth=1.0, xbounds=None, ybounds=None
+):
     """
     Adds a range frame to a matplotlib graph.  The range frame is
     described in Tufte's "The Visual Display of Quantitative
@@ -101,7 +119,7 @@ def add_range_frame(axes=None, color="k", linewidth=1.0,
 
     The range frame is an unobtrusive way of marking the minimum and
     maxiumum values on a scatterplot or other graph.
-    
+
     axes: the matplotlib axes to apply a range frame to.  If None or
     unspecified, use the current axes
 
@@ -111,7 +129,6 @@ def add_range_frame(axes=None, color="k", linewidth=1.0,
 
     xbounds, ybounds: tuple (min,max) on x and y axes
 
-    
     """
 
 # Implementation detail: you might expect that the range of values is
@@ -121,10 +138,12 @@ def add_range_frame(axes=None, color="k", linewidth=1.0,
     if axes is None:
         axes = matplotlib.pylab.gca()
 
-    axes.add_artist(RangeFrameArtist(color=color,
-                                     linewidth=linewidth,
-                                     xbounds=xbounds,
-                                     ybounds=ybounds))
+    axes.add_artist(RangeFrameArtist(
+        color=color,
+        linewidth=linewidth,
+        xbounds=xbounds,
+        ybounds=ybounds
+    ))
 
     cleanframe_and_ticks(axes)
 
@@ -141,7 +160,7 @@ def add_dot_dash_plot(axes=None, xs=None, ys=None):
     yx: a list of values along the y-axis to plot
 
     """
-    
+
     if axes is None:
         axes = matplotlib.pylab.gca()
 
@@ -152,4 +171,3 @@ def add_dot_dash_plot(axes=None, xs=None, ys=None):
         axes.yaxis.set_minor_locator(FixedLocator(ys))
 
     cleanframe_and_ticks(axes)
-
