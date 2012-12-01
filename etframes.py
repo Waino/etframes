@@ -11,10 +11,13 @@ import matplotlib.pylab
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
+import pylab
 
 from matplotlib.collections import LineCollection
 from matplotlib.artist import Artist
 from matplotlib.ticker import FixedLocator
+from scipy.signal import lfilter
+
 
 __all__ = ["add_range_frame", "add_dot_dash_plot"]
 
@@ -38,6 +41,33 @@ def interval_as_array(interval):
         return np.array(tmp.get_bounds())
     else:
         return np.asarray(interval)
+
+
+def colorframe(axes, color):
+    """ Sets the color used for plotting the frame around plot contents """
+    for spine in axes.spines.values():
+            spine.set_edgecolor(color)
+
+
+def offset_xlabel(label, axes, offset):
+    """
+    Draws an xlabel that is at the given offset from the bottom of the
+    axis, regardless of the status of the tick labels.
+    (Normal xlabels adjust upwards if tick labels are removed)
+    """
+    text = matplotlib.text.Text(.5, 0, label, horizontalalignment='center')
+    text.set_transform(transforms.offset_copy(
+        axes.transAxes, axes.figure, x=0, y=offset, units='points'
+    ))
+    text.set_clip_on(False)
+    axes.add_artist(text)
+
+
+def line_histogram(data, bins, **kwargs):
+    """ Draws a histogram as line plot instead of a bar plot """
+    (ys, edges) = np.histogram(data, bins)
+    centers = lfilter([0.5, 0.5], 1.0, edges)[1:]
+    return plt.plot(centers, ys, **kwargs)
 
 
 class RangeFrameArtist(Artist):
@@ -260,3 +290,93 @@ def bar_chart(
     # Only works on screen.
     fig = matplotlib.pylab.gcf()
     fig.set_facecolor(papercolor)
+
+
+def multi_scatter(
+    data, labels=None, framecolor=None, bins=None, label_offset=-30,
+    hist_kwargs=None, scatter_kwargs=None
+):
+    """
+    Plots the pairwise scatterplots for the (observations * variables) data matrix.
+    Inspired by p. 114 of Tufte's "The Visual Display of Quantitative Information".
+
+    data: 2D Data matrix. Columns represent variables, rows represent observations.
+    labels: Labels for the variables. Must match second dimension of data.
+            Default: no labels.
+    framecolor: Color to use for the frames around the plot. Default: light gray.
+    bins: Number of bins to use for the histograms. Default: automatic.
+    label_offset: Offset from x-axis for x labels. Default: -30 pt.
+    hist_kwargs: dict of keyword arguments to pass to histogram plots. Default: none.
+    scatter_kwargs: dict of keyword arguments to pass to scatter plots. Default: none.
+    """
+
+    # Data easier to handle internally if as (vars * obs)
+    data = data.transpose()
+
+    nvars = data.shape[0]
+    nobs = data.shape[1]
+
+    if labels is not None:
+        assert len(labels) == nvars, 'Length of labels (%d) does not match number of variables (%d)' % (len(labels), nvars)
+
+    if bins is None:
+        bins = min(max(np.ceil(nobs / 10), 3), 100)
+    
+    if framecolor is None:
+        framecolor = (.8, .8, .8)
+    if hist_kwargs is None:
+        hist_kwargs = dict()
+    if scatter_kwargs is None:
+        scatter_kwargs = dict()
+
+    k = 1
+    for i in range(nvars):
+        for j in range(nvars):
+            plt.subplot(nvars, nvars, k)
+            k += 1
+            if i == j:
+                line_histogram(data[i], bins, **hist_kwargs)
+            else:
+                pylab.scatter(data[j], data[i], **scatter_kwargs)
+
+            axes = matplotlib.pylab.gca()
+            colorframe(axes, framecolor)
+            if i == 0:
+                # top row
+                if j % 2 == 0:
+                    axes.xaxis.tick_top()
+                    axes.xaxis.set_label_position('top')
+                else:
+                    axes.set_xticks([])
+            elif i == nvars - 1:
+                # bottom row
+                if j % 2 == 1:
+                    axes.xaxis.tick_bottom()
+                    axes.xaxis.set_label_position('bottom')
+                else:
+                    axes.set_xticks([])
+                if labels is not None:
+                    offset_xlabel(labels[j], axes, label_offset)
+            else:
+                # middle rows
+                axes.set_xticks([])
+
+            if j == 0:
+                # left column
+                if i % 2 == 1:
+                    axes.yaxis.tick_left()
+                    axes.yaxis.set_label_position('left')
+                else:
+                    axes.set_yticks([])
+            elif j == nvars - 1:
+                # right column
+                if i % 2 == 0:
+                    axes.yaxis.tick_right()
+                    axes.yaxis.set_label_position('right')
+                else:
+                    axes.set_yticks([])
+            else:
+                # middle columns
+                axes.set_yticks([])
+
+    plt.subplots_adjust(wspace=0, hspace=0)
