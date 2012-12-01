@@ -29,30 +29,6 @@ def cleanframe_and_ticks(axes):
     axes.get_xaxis().tick_bottom()
     axes.get_yaxis().tick_left()
 
-# Using blended transform should make these obsolete
-'''
-def interval_frac(interval, datapoint):
-    """
-    Given an interval and a point in the same range, return
-    the fractional distance of that point along the interval
-    Clipped to [0,1]
-    """
-
-    pos = (datapoint - interval[0]) / (interval[1] - interval[0])
-    # don't allow past border of axis
-    return max(0.0, min(1.0, pos))
-
-
-def data_bounds_on_axis(view_interval, data_bounds):
-    """Map min/max from data space to viewport space."""
-
-    if data_bounds is None:
-        return (0.0, 1.0)
-
-    lower = interval_frac(view_interval, data_bounds[0])
-    upper = interval_frac(view_interval, data_bounds[1])
-    return lower, upper
-'''
 
 def interval_as_array(interval):
     """Backwards compatibility with pre-numpy intervals."""
@@ -142,13 +118,16 @@ class BarChartArtist(Artist):
         self.clean_ticks()
 
     def make_bottom_line(self):
-        """ Makes a line at the bottom. FIXME: for some reason there is a single pixel glitch """
+        """
+        Makes a line at the bottom.
+        FIXME: for some reason there is a single pixel glitch.
+        """
         trans = transforms.blended_transform_factory(
             self.axes.transData, self.axes.transAxes
         )
 
         range_lines = LineCollection(
-            segments=[[(self.xminf,0), (self.xmaxf,0)]],
+            segments=[[(self.xminf, 0), (self.xmaxf, 0)]],
             linewidths=[self.linewidth],
             colors=[self.color],
             transform=trans,
@@ -158,9 +137,16 @@ class BarChartArtist(Artist):
 
     def clean_ticks(self):
         """ For this chart, we don't want ticks on either side, only labels """
-        for tick in self.axes.xaxis.get_major_ticks() + self.axes.xaxis.get_minor_ticks():
+        for tick in (
+            self.axes.xaxis.get_major_ticks()
+            + self.axes.xaxis.get_minor_ticks()
+        ):
             tick.tick1On = False
-        for tick in self.axes.yaxis.get_major_ticks() + self.axes.yaxis.get_minor_ticks():
+
+        for tick in (
+            self.axes.yaxis.get_major_ticks()
+            + self.axes.yaxis.get_minor_ticks()
+        ):
             tick.tick1On = False
 
 
@@ -256,7 +242,10 @@ def bar_chart(
     if papercolor is None:
         papercolor = (1, 1, 1)
 
-    plt.bar(range(len(data)), data, width=barwidth, align='center', color=color, edgecolor=color)
+    plt.bar(
+        range(len(data)), data,
+        width=barwidth, align='center', color=color, edgecolor=color
+    )
     axes = matplotlib.pylab.gca()
     cleanframe_and_ticks(axes)
     axes.set_xlim(-barwidth, len(data) - 1 + barwidth)
