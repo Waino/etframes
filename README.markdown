@@ -3,18 +3,42 @@ etframes: Applying the ideas of Edward Tufte to matplotlib
 
 [Edward Tufte](http://en.wikipedia.org/wiki/Edward_tufte) is a
 professor and author known for his excellent (and beautiful!) books on
-the visual display of statistical information.  Last year I had the
-opportunity to attend one of his
-[courses](http://www.edwardtufte.com/tufte/courses) and was inspired
-to apply his ideas to my favorite plotting library,
-[matplotlib](http://matplotlib.sourceforge.net/).
+the visual display of statistical information.
+[Adam Hupp](https://github.com/ahupp) had already begun
+applying his ideas the excellent plotting library,
+[matplotlib](http://matplotlib.sourceforge.net/),
+but the project had not been updated for several years.
+As matplotlib happens to be my favourite plotting library too,
+and I appreciate the aesthetics of Tufte's designs,
+I decided to continue on his work by forking it.
 
-The result is [etfames](http://hupp.org/adam/svn/public/etframes), a
+The result is a fork of [etframes](https://github.com/Waino/etframes), a
 python module that operates on matplotlib plots.  So far I've
-implemented two graph types described in the [The Visual Display of
+implemented two new graph types described in the [The Visual Display of
 Quantitative Information
-(VDQI)](http://www.amazon.com/gp/redirect.html?ie=UTF8&location=http%3A%2F%2Fwww.amazon.com%2FVisual-Display-Quantitative-Information-2nd%2Fdp%2F0961392142%3Fie%3DUTF8%26s%3Dbooks%26qid%3D1188758757%26sr%3D8-1&tag=rococothenrub-20&linkCode=ur2&camp=1789&creative=9325):
-the dash-dot-plot and range frames.
+(VDQI)](http://www.amazon.com/Visual-Display-Quantitative-Information-2nd/dp/0961392142)
+
+Together with the original dash-dot-plot and range frames that makes
+four available plot types.
+
+Bar Chart
+---------
+
+A cleaned up version of the traditional bar chart.
+Due to the design of the visuals, this chart only works for a single
+data series, and looks good only for data series with lengths between
+6 and ca 100. For example:
+
+![Example of a bar chart](http://www.waino.org/images/etframes/barchart.png)
+
+Multi-variate scatterplot
+-------------------------
+
+The pairwise scatterplots for the variables in an (observations * variables)
+data matrix. Can be used to visually show linear dependencies between
+variables. For example:
+
+![Example of a scatterplot](http://www.waino.org/images/etframes/multiscatter.png)
 
 Dash Dot Plot
 -------------
