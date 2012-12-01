@@ -29,7 +29,8 @@ def cleanframe_and_ticks(axes):
     axes.get_xaxis().tick_bottom()
     axes.get_yaxis().tick_left()
 
-
+# Using blended transform should make these obsolete
+'''
 def interval_frac(interval, datapoint):
     """
     Given an interval and a point in the same range, return
@@ -42,16 +43,6 @@ def interval_frac(interval, datapoint):
     return max(0.0, min(1.0, pos))
 
 
-def interval_as_array(interval):
-    """Backwards compatibility with pre-numpy intervals."""
-
-    if callable(interval):
-        tmp = interval()
-        return np.array(tmp.get_bounds())
-    else:
-        return np.asarray(interval)
-
-
 def data_bounds_on_axis(view_interval, data_bounds):
     """Map min/max from data space to viewport space."""
 
@@ -61,6 +52,16 @@ def data_bounds_on_axis(view_interval, data_bounds):
     lower = interval_frac(view_interval, data_bounds[0])
     upper = interval_frac(view_interval, data_bounds[1])
     return lower, upper
+'''
+
+def interval_as_array(interval):
+    """Backwards compatibility with pre-numpy intervals."""
+
+    if callable(interval):
+        tmp = interval()
+        return np.array(tmp.get_bounds())
+    else:
+        return np.asarray(interval)
 
 
 class RangeFrameArtist(Artist):
@@ -82,33 +83,37 @@ class RangeFrameArtist(Artist):
         if not self.get_visible(): return
 
         rf = self.make_range_frame()
-        rf.draw(renderer)
+        for obj in rf:
+            obj.draw(renderer)
 
     def make_range_frame(self):
         """ Constructs the component lines of the range frame """
-        xminf, xmaxf = data_bounds_on_axis(
-            interval_as_array(self.axes.viewLim.intervalx),
-            self.xbounds
+        xtrans = transforms.blended_transform_factory(
+            self.axes.transData, self.axes.transAxes
         )
+        intervalx = interval_as_array(self.axes.dataLim.intervalx)
 
-        yminf, ymaxf = data_bounds_on_axis(
-            interval_as_array(self.axes.viewLim.intervaly),
-            self.ybounds
+        ytrans = transforms.blended_transform_factory(
+            self.axes.transAxes, self.axes.transData
         )
+        intervaly = interval_as_array(self.axes.dataLim.intervaly)
 
-        xline = [(xminf, 0), (xmaxf, 0)]
-        yline = [(0, yminf), (0, ymaxf)]
-
-        range_lines = LineCollection(
-            segments=[xline, yline],
+        xline = LineCollection(
+            segments=[[(intervalx[0], 0), (intervalx[1], 0)]],
             linewidths=[self.linewidth],
-            colors=[self.color]
+            colors=[self.color],
+            transform=xtrans,
+            zorder=10
+        )
+        yline = LineCollection(
+            segments=[[(0, intervaly[0]), (0, intervaly[1])]],
+            linewidths=[self.linewidth],
+            colors=[self.color],
+            transform=ytrans,
+            zorder=10
         )
 
-        range_lines.set_transform(self.axes.transAxes)
-        range_lines.set_zorder(10)
-
-        return range_lines
+        return [xline, yline]
 
 
 class BarChartArtist(Artist):
