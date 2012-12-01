@@ -12,7 +12,7 @@ As matplotlib happens to be my favourite plotting library too,
 and I appreciate the aesthetics of Tufte's designs,
 I decided to continue on his work by forking it.
 
-The result is a fork of [etframes](https://github.com/Waino/etframes), a
+The result is a fork of [etframes](https://github.com/ahupp/etframes), a
 python module that operates on matplotlib plots.  So far I've
 implemented two new graph types described in the [The Visual Display of
 Quantitative Information
@@ -27,7 +27,10 @@ Bar Chart
 A cleaned up version of the traditional bar chart.
 Due to the design of the visuals, this chart only works for a single
 data series, and looks good only for data series with lengths between
-6 and ca 100. For example:
+6 and ca 100. If these limitations seem too constricting,
+try customizing the standard matplotlib barchart instead.
+
+An example bar chart:
 
 ![Example of a bar chart](http://www.waino.org/images/etframes/barchart.png)
 

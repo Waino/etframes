@@ -19,7 +19,10 @@ from matplotlib.ticker import FixedLocator
 from scipy.signal import lfilter
 
 
-__all__ = ["add_range_frame", "add_dot_dash_plot"]
+__all__ = [
+    'add_range_frame', 'add_dot_dash_plot',
+    'bar_chart', 'multi_scatter'
+]
 
 
 def cleanframe_and_ticks(axes):
