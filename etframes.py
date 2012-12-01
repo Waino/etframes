@@ -94,7 +94,7 @@ class RangeFrameArtist(Artist):
 
 class BarChartArtist(Artist):
     """ Axis drawing artist for the simplified bar chart """
-    def __init__(self, color=None, linewidth=None):
+    def __init__(self, xmax, barwidth, color=None, linewidth=None):
         """
         color: color to use for bottom line
         linewidth: width of bottom line
@@ -106,11 +106,11 @@ class BarChartArtist(Artist):
             linewidth = 3
         self.color = color
         self.linewidth = linewidth
+        self.xmax = xmax
+        self.barwidth = barwidth
 
     def draw(self, renderer, *args, **kwargs):
         if not self.get_visible(): return
-
-        self.xminf, self.xmaxf = interval_as_array(self.axes.dataLim.intervalx)
 
         bottom = self.make_bottom_line()
         bottom.draw(renderer)
@@ -127,11 +127,12 @@ class BarChartArtist(Artist):
         )
 
         range_lines = LineCollection(
-            segments=[[(self.xminf, 0), (self.xmaxf, 0)]],
+            segments=[[(0-(self.barwidth/2.0), 0), (self.xmax + (self.barwidth/2.0), 0)]],
             linewidths=[self.linewidth],
             colors=[self.color],
             transform=trans,
-            zorder=0
+            zorder=0,
+            antialiaseds=[0]
         )
         return range_lines
 
@@ -223,6 +224,7 @@ def bar_chart(
 
     data: A vector of numerical values.
           Multiple data series are not supported.
+
     yticks: Positions of y-axis ticks and white grid lines.
             The user must explicitly set these, as it strongly affects the
             readability of the chart.
@@ -230,29 +232,40 @@ def bar_chart(
     Optional keyword arguments:
     color: color to use for the bars. Default: gray.
     papercolor: color of paper. Necessary for the white grid to work.
-                Default: white.
-    linewidth: width of white grid and bottom line.
+                Only works on screen currently (has to be respecified when
+                saving to file if nonwhite). Default: white.
+    linewidth: width of white grid and bottom line. Default: 3
     barwidth: width of the bars, as proportion [0,1]. Default: 0.5.
     """
     data = np.asarray(data)
     assert len(data.shape) == 1, 'This bar chart is only designed for univariate data'
+    assert data.shape[0] > 5, 'Sadly this chart does not look good with less than 6 bars'
+    # FIXME: Which is partly due to the approximate bar placement causing
+    # a glitch in the bottom line placement.
 
     if color is None:
         color = (.5, .5, .5)
     if papercolor is None:
         papercolor = (1, 1, 1)
 
+    # Sadly the bar placement seems to be approximate,
+    # probably to avoid aliasing.
+    # align='center' seems to worsen this further,
+    # which is why bars are positioned manually
     plt.bar(
-        range(len(data)), data,
-        width=barwidth, align='center', color=color, edgecolor=color
+        np.array(range(len(data)))-(barwidth/2.0)+0.01, data,
+        width=barwidth, color=color, edgecolor=color
     )
     axes = matplotlib.pylab.gca()
     cleanframe_and_ticks(axes)
     axes.set_xlim(-barwidth, len(data) - 1 + barwidth)
     axes.set_yticks(yticks)
-    axes.add_artist(BarChartArtist())
+    axes.add_artist(BarChartArtist(len(data) - 1, barwidth, color=color, linewidth=linewidth))
     for tick in axes.xaxis.get_major_ticks() + axes.xaxis.get_minor_ticks():
         tick.tick1On = False
     for y in axes.yaxis.get_majorticklocs():
         if y == 0: continue
-        plt.axhline(y, color=papercolor, linewidth=3)
+        plt.axhline(y, color=papercolor, linewidth=linewidth)
+    # Only works on screen.
+    fig = matplotlib.pylab.gcf()
+    fig.set_facecolor(papercolor)
