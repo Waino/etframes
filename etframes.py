@@ -138,17 +138,8 @@ class BarChartArtist(Artist):
 
     def clean_ticks(self):
         """ For this chart, we don't want ticks on either side, only labels """
-        for tick in (
-            self.axes.xaxis.get_major_ticks()
-            + self.axes.xaxis.get_minor_ticks()
-        ):
-            tick.tick1On = False
-
-        for tick in (
-            self.axes.yaxis.get_major_ticks()
-            + self.axes.yaxis.get_minor_ticks()
-        ):
-            tick.tick1On = False
+        self.axes.xaxis.set_ticks_position('none')
+        self.axes.yaxis.set_ticks_position('none')
 
 
 def add_range_frame(
@@ -252,6 +243,7 @@ def bar_chart(
     # probably to avoid aliasing.
     # align='center' seems to worsen this further,
     # which is why bars are positioned manually
+    # FIXME this is a quick-and-dirty fix
     plt.bar(
         np.array(range(len(data)))-(barwidth/2.0)+0.01, data,
         width=barwidth, color=color, edgecolor=color
@@ -261,8 +253,7 @@ def bar_chart(
     axes.set_xlim(-barwidth, len(data) - 1 + barwidth)
     axes.set_yticks(yticks)
     axes.add_artist(BarChartArtist(len(data) - 1, barwidth, color=color, linewidth=linewidth))
-    for tick in axes.xaxis.get_major_ticks() + axes.xaxis.get_minor_ticks():
-        tick.tick1On = False
+    axes.xaxis.set_ticks_position('none')
     for y in axes.yaxis.get_majorticklocs():
         if y == 0: continue
         plt.axhline(y, color=papercolor, linewidth=linewidth)
